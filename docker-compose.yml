@@ -9,7 +9,7 @@ services:
       # Required: GitHub organization/user name
       - GITHUB_ORG=${GITHUB_ORG}
       
-      # Required: GitHub runner registration token
+      # Required for initial registration only (persisted after first run)
       # Get from: https://github.com/{ORG}/settings/actions/runners/new
       - GITHUB_TOKEN=${GITHUB_TOKEN}
       
@@ -25,6 +25,7 @@ services:
     # Mount Docker socket to allow Docker-in-Docker for actions that need it
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - runner_config:/home/actions-runner/.runner-config
       - runner_work:/home/actions-runner/_work
     
     # Resources (adjust based on your needs)
@@ -32,4 +33,5 @@ services:
     # cpus: 1.0
 
 volumes:
+  runner_config:
   runner_work:
