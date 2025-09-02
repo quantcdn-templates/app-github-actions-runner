@@ -1,0 +1,35 @@
+services:
+  github-runner:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    image: ghcr.io/quantcdn-templates/app-github-actions-runner:latest
+    restart: unless-stopped
+    environment:
+      # Required: GitHub organization/user name
+      - GITHUB_ORG=${GITHUB_ORG}
+      
+      # Required: GitHub runner registration token
+      # Get from: https://github.com/{ORG}/settings/actions/runners/new
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      
+      # Optional: Custom runner name (defaults to hostname)
+      - RUNNER_NAME=${RUNNER_NAME:-quant-cloud-runner}
+      
+      # Optional: Custom labels (defaults to quant-cloud,self-hosted)
+      - RUNNER_LABELS=${RUNNER_LABELS:-quant-cloud,self-hosted}
+      
+      # Optional: Working directory for actions
+      - RUNNER_WORK_DIR=${RUNNER_WORK_DIR:-_work}
+    
+    # Mount Docker socket to allow Docker-in-Docker for actions that need it
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - runner_work:/home/actions-runner/_work
+    
+    # Resources (adjust based on your needs)
+    # mem_limit: 2g
+    # cpus: 1.0
+
+volumes:
+  runner_work:

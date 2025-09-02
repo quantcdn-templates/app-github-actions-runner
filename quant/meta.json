@@ -1,0 +1,11 @@
+{
+  "name": "GitHub Actions Runner",
+  "description": "Self-hosted GitHub Actions runner for Quant Cloud",
+  "category": "CI/CD",
+  "tags": ["github", "actions", "ci-cd", "runner", "automation"],
+  "architecture": ["x86_64", "arm64"],
+  "version": "1.0.0",
+  "maintainer": "Quant Cloud",
+  "repository": "https://github.com/quantcdn-templates/app-github-actions-runner",
+  "license": "MIT"
+}
