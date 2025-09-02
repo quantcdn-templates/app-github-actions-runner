@@ -6,7 +6,7 @@ echo "[$(date +'%Y-%m-%d %H:%M:%S')] GitHub Actions Runner starting..."
 # Required environment variables
 GITHUB_ORG=${GITHUB_ORG:-}
 GITHUB_TOKEN=${GITHUB_TOKEN:-}
-RUNNER_NAME=${RUNNER_NAME:-"quant-cloud-runner-$(hostname)"}
+RUNNER_NAME=${RUNNER_NAME:-"${QUANT_APP_NAME:-quant-runner}-$(shuf -i 1000-9999 -n 1)"}
 RUNNER_LABELS=${RUNNER_LABELS:-"quant-cloud,self-hosted"}
 
 # Validate required environment variables
