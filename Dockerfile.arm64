@@ -25,9 +25,8 @@ RUN useradd -m -s /bin/bash actions-runner && \
 
 # Set up actions-runner directory
 WORKDIR /home/actions-runner
-USER actions-runner
 
-# Download and install GitHub Actions runner for ARM64
+# Download and install GitHub Actions runner for ARM64 (as root to avoid qemu sudo issues)
 ARG RUNNER_VERSION=2.328.0
 RUN curl -o actions-runner-linux-arm64-${RUNNER_VERSION}.tar.gz -L \
         https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-arm64-${RUNNER_VERSION}.tar.gz && \
@@ -35,13 +34,16 @@ RUN curl -o actions-runner-linux-arm64-${RUNNER_VERSION}.tar.gz -L \
     tar xzf ./actions-runner-linux-arm64-${RUNNER_VERSION}.tar.gz && \
     rm actions-runner-linux-arm64-${RUNNER_VERSION}.tar.gz
 
-# Install additional dependencies for the runner
-RUN sudo ./bin/installdependencies.sh
+# Install additional dependencies for the runner (as root to avoid qemu emulation sudo issues)
+RUN ./bin/installdependencies.sh
 
-# Copy entrypoint script
+# Copy entrypoint script and set ownership
 COPY entrypoint.sh /home/actions-runner/entrypoint.sh
-RUN sudo chown actions-runner:actions-runner /home/actions-runner/entrypoint.sh && \
+RUN chown -R actions-runner:actions-runner /home/actions-runner && \
     chmod +x /home/actions-runner/entrypoint.sh
+
+# Switch to actions-runner user
+USER actions-runner
 
 # Expose any ports if needed (none for basic runner)
 # GitHub Actions runners typically don't need exposed ports
