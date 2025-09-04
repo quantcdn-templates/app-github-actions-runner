@@ -3,9 +3,8 @@ services:
     image: moby/buildkit:rootless
     restart: unless-stopped
     environment:
-      - BUILDKITD_FLAGS=--oci-worker-no-process-sandbox
+      - BUILDKITD_FLAGS=--oci-worker-no-process-sandbox --addr tcp://0.0.0.0:1234
     volumes:
-      - buildkit-socket:/run/buildkit
       - buildkit-cache:/var/lib/buildkit
 
   github-runner:
@@ -36,12 +35,11 @@ services:
       # Optional: Working directory for actions
       - RUNNER_WORK_DIR=${RUNNER_WORK_DIR:-_work}
       
-      # BuildKit configuration for Fargate compatibility
-      - BUILDKIT_HOST=unix:///run/buildkit/buildkitd.sock
+      # BuildKit configuration for ECS scaling compatibility
+      - BUILDKIT_HOST=tcp://buildkit:1234
     
     # Fargate-compatible volumes
     volumes:
-      - buildkit-socket:/run/buildkit
       - runner_config:/home/actions-runner/.runner-config
       - runner_work:/home/actions-runner/_work
     
@@ -50,7 +48,6 @@ services:
     # cpus: 1.0
 
 volumes:
-  buildkit-socket:
   buildkit-cache:
   runner_config:
   runner_work:

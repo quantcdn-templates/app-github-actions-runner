@@ -78,11 +78,11 @@ docker run -d \
   ghcr.io/quantcdn-templates/app-github-actions-runner:latest
 ```
 
-### With BuildKit Support (Fargate-compatible)
+### With BuildKit Support (ECS scaling-compatible)
 ```bash
-# Uses docker-compose with BuildKit sidecar
+# Uses docker-compose with BuildKit TCP sidecar
 docker-compose up -d
-# No Docker socket mounting required - uses BuildKit rootless
+# No Docker socket mounting - BuildKit communicates via TCP (perfect for ECS scaling)
 ```
 
 ## Architecture Support
@@ -98,7 +98,7 @@ docker-compose up -d
 2. **Personal Access Tokens** should have minimal scopes (only `repo` or `admin:org` for enterprise)
 3. **Runner isolation**: Each runner runs in its own container
 4. **Non-root execution**: Runner process runs as `actions-runner` user
-5. **Docker builds**: Uses BuildKit rootless sidecar (no privileged containers or socket mounting)
+5. **Docker builds**: Uses BuildKit rootless sidecar via TCP (perfect for ECS scaling - no shared volumes)
 
 ## Troubleshooting
 
@@ -109,7 +109,8 @@ docker-compose up -d
 
 ### Permission Issues
 - Check GitHub repository/organization access permissions
-- For Docker builds, ensure BuildKit service is running (via docker-compose)
+- For Docker builds, ensure BuildKit service is accessible at `tcp://buildkit:1234`
+- **ECS Scaling**: Each task has its own BuildKit instance - no shared socket conflicts
 
 ### Runner Offline
 - Registration tokens expire after 1 hour
