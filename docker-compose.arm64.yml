@@ -1,10 +1,23 @@
 services:
+  buildkit:
+    image: moby/buildkit:rootless
+    restart: unless-stopped
+    environment:
+      - BUILDKITD_FLAGS=--oci-worker-no-process-sandbox
+    volumes:
+      - buildkit-socket:/run/buildkit
+      - buildkit-cache:/var/lib/buildkit
+
   github-runner:
     build:
       context: ./
-      dockerfile: Dockerfile.arm64
+      dockerfile: Dockerfile
+      platforms:
+        - linux/arm64
     image: ghcr.io/quantcdn-templates/app-github-actions-runner:arm64
     restart: unless-stopped
+    depends_on:
+      - buildkit
     environment:
       # Required: GitHub organization/user name
       - GITHUB_ORG=${GITHUB_ORG}
@@ -13,18 +26,22 @@ services:
       # Get from: https://github.com/{ORG}/settings/actions/runners/new
       - GITHUB_TOKEN=${GITHUB_TOKEN}
       
-      # Optional: Custom runner name (defaults to hostname)
-      - RUNNER_NAME=${RUNNER_NAME:-quant-cloud-runner-arm64}
+      # Optional: Custom runner name (defaults to QUANT_APP_NAME + random suffix)
+      - RUNNER_NAME=${RUNNER_NAME}
+      - QUANT_APP_NAME=${QUANT_APP_NAME}
       
-      # Optional: Custom labels (defaults to quant-cloud,self-hosted)
+      # Optional: Custom labels (defaults to quant-cloud,self-hosted)docker 
       - RUNNER_LABELS=${RUNNER_LABELS:-quant-cloud,self-hosted,ARM64}
       
       # Optional: Working directory for actions
       - RUNNER_WORK_DIR=${RUNNER_WORK_DIR:-_work}
+      
+      # BuildKit configuration for Fargate compatibility
+      - BUILDKIT_HOST=unix:///run/buildkit/buildkitd.sock
     
-    # Mount Docker socket to allow Docker-in-Docker for actions that need it
+    # Fargate-compatible volumes
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - buildkit-socket:/run/buildkit
       - runner_config:/home/actions-runner/.runner-config
       - runner_work:/home/actions-runner/_work
     
@@ -33,5 +50,7 @@ services:
     # cpus: 1.0
 
 volumes:
+  buildkit-socket:
+  buildkit-cache:
   runner_config:
   runner_work:
