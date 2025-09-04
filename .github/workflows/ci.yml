@@ -33,7 +33,7 @@ jobs:
             runner_arch: x64
             is_default: true
           - arch: arm64
-            dockerfile: Dockerfile.arm64
+            dockerfile: Dockerfile
             runner_arch: arm64
 
     steps:

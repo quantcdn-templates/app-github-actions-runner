@@ -8,7 +8,7 @@ A self-hosted GitHub Actions runner template for Quant Cloud, supporting both x8
 - **Secure**: Runs as non-root user with minimal privileges
 - **Auto-configuration**: Automatically registers with GitHub
 - **Graceful shutdown**: Properly deregisters runner on container stop
-- **Docker support**: Includes Docker-in-Docker capability for actions that need it
+- **Docker support**: BuildKit rootless integration for secure container builds (Fargate-compatible)
 - **Customizable**: Configure runner name, labels, and working directory
 
 ## Quick Start
@@ -38,6 +38,8 @@ docker-compose up -d
 ```bash
 docker-compose -f docker-compose.arm64.yml up -d
 ```
+
+**Note**: Both compose files now use the same unified Dockerfile with automatic architecture detection.
 
 ## Environment Variables
 
@@ -76,24 +78,19 @@ docker run -d \
   ghcr.io/quantcdn-templates/app-github-actions-runner:latest
 ```
 
-### With Docker Support
+### With BuildKit Support (Fargate-compatible)
 ```bash
-docker run -d \
-  -e GITHUB_ORG=mycompany \
-  -e GITHUB_TOKEN=ABCD1234... \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  ghcr.io/quantcdn-templates/app-github-actions-runner:latest
+# Uses docker-compose with BuildKit sidecar
+docker-compose up -d
+# No Docker socket mounting required - uses BuildKit rootless
 ```
 
 ## Architecture Support
 
-### x86_64 (Intel/AMD)
-- Use `Dockerfile` 
-- Image: `ghcr.io/quantcdn-templates/app-github-actions-runner:latest`
-
-### ARM64 (Apple Silicon/Graviton)
-- Use `Dockerfile.arm64`
-- Image: `ghcr.io/quantcdn-templates/app-github-actions-runner:arm64`
+### Unified Multi-Architecture
+- **Single `Dockerfile`** automatically detects target architecture
+- **x86_64**: `ghcr.io/quantcdn-templates/app-github-actions-runner:latest`
+- **ARM64**: `ghcr.io/quantcdn-templates/app-github-actions-runner:arm64`
 
 ## Security Considerations
 
@@ -101,7 +98,7 @@ docker run -d \
 2. **Personal Access Tokens** should have minimal scopes (only `repo` or `admin:org` for enterprise)
 3. **Runner isolation**: Each runner runs in its own container
 4. **Non-root execution**: Runner process runs as `actions-runner` user
-5. **Docker access**: Only mount Docker socket if your actions need Docker
+5. **Docker builds**: Uses BuildKit rootless sidecar (no privileged containers or socket mounting)
 
 ## Troubleshooting
 
@@ -111,8 +108,8 @@ docker run -d \
 - Check container logs: `docker logs <container-name>`
 
 ### Permission Issues
-- Ensure Docker socket permissions if using Docker-in-Docker
 - Check GitHub repository/organization access permissions
+- For Docker builds, ensure BuildKit service is running (via docker-compose)
 
 ### Runner Offline
 - Registration tokens expire after 1 hour
@@ -148,9 +145,9 @@ gh api repos/{OWNER}/{REPO}/actions/runners/registration-token
 docker build -t local-github-runner .
 ```
 
-**ARM64:**
+**Multi-platform:**
 ```bash
-docker build -f Dockerfile.arm64 -t local-github-runner-arm64 .
+docker buildx build --platform linux/amd64,linux/arm64 -t local-github-runner .
 ```
 
 ### Testing
