@@ -37,6 +37,9 @@ services:
       
       # BuildKit configuration for ECS scaling compatibility
       - BUILDKIT_HOST=tcp://buildkit:1234
+      
+      # Allow runner to run as root user
+      - RUNNER_ALLOW_RUNASROOT=1
     
     # Fargate-compatible volumes
     volumes:
