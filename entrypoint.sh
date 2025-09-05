@@ -21,17 +21,31 @@ echo "[$(date +'%Y-%m-%d %H:%M:%S')] Organization: ${GITHUB_ORG}"
 echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner name: ${RUNNER_NAME}"
 echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner labels: ${RUNNER_LABELS}"
 
-# Restore config from persistent storage if available
+# Check for persistent config and restore if available
+SKIP_REGISTRATION=false
+
 if [ -d .runner-config ] && [ "$(ls -A .runner-config 2>/dev/null)" ]; then
-    echo "[$(date +'%Y-%m-%d %H:%M:%S')] Restoring runner config from persistent storage..."
-    cp .runner-config/* . 2>/dev/null || true
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] Found persistent runner config, restoring..."
+    # Copy specific config files we know should exist
+    [ -f .runner-config/.runner ] && cp .runner-config/.runner . && echo "[$(date +'%Y-%m-%d %H:%M:%S')] Restored .runner"
+    [ -f .runner-config/.credentials ] && cp .runner-config/.credentials . && echo "[$(date +'%Y-%m-%d %H:%M:%S')] Restored .credentials"
+    [ -f .runner-config/.credentials_rsaparams ] && cp .runner-config/.credentials_rsaparams . && echo "[$(date +'%Y-%m-%d %H:%M:%S')] Restored .credentials_rsaparams"
+    
+    # If we have persistent config, we don't need the token anymore
+    if [ -f .runner ]; then
+        echo "[$(date +'%Y-%m-%d %H:%M:%S')] ✅ Using existing runner configuration"
+        echo "[$(date +'%Y-%m-%d %H:%M:%S')] Clearing GITHUB_TOKEN to prevent re-registration"
+        unset GITHUB_TOKEN
+        SKIP_REGISTRATION=true
+    else
+        echo "[$(date +'%Y-%m-%d %H:%M:%S')] Persistent config incomplete, will re-register"
+    fi
+else
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] No persistent config found, will register new runner"
 fi
 
-# Check if runner is already configured
-if [ -f .runner ]; then
-    echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner already configured, starting existing runner..."
-    echo "[$(date +'%Y-%m-%d %H:%M:%S')] Skipping registration (runner config found)"
-else
+# Only register if we don't have valid persistent config
+if [ "$SKIP_REGISTRATION" = "false" ]; then
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] First time setup - configuring new runner..."
     
     # Validate registration token for initial setup only
@@ -61,6 +75,9 @@ else
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] Saving runner config to persistent storage..."
     mkdir -p .runner-config
     cp .runner .credentials* .runner-config/ 2>/dev/null || true
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] ✅ Config saved to persistent storage"
+else
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] ✅ Skipping registration - using existing config"
 fi
 
 # Handle shutdown gracefully

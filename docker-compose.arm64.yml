@@ -4,8 +4,7 @@ services:
     restart: unless-stopped
     environment:
       - BUILDKITD_FLAGS=--oci-worker-no-process-sandbox --addr tcp://0.0.0.0:1234
-    volumes:
-      - buildkit-cache:/var/lib/buildkit
+    # No shared cache volume - each instance uses ephemeral storage to avoid lock conflicts
 
   github-runner:
     build:
@@ -51,6 +50,5 @@ services:
     # cpus: 1.0
 
 volumes:
-  buildkit-cache:
   runner_config:
   runner_work:
