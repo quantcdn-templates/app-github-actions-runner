@@ -1,6 +1,6 @@
 services:
   buildkit:
-    image: moby/buildkit:rootless
+    image: moby/buildkit:buildkitd
     restart: unless-stopped
     environment:
       - BUILDKITD_FLAGS=--oci-worker-no-process-sandbox --addr tcp://0.0.0.0:1234
