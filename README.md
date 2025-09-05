@@ -5,7 +5,7 @@ A self-hosted GitHub Actions runner template for Quant Cloud, supporting both x8
 ## Features
 
 - **Multi-architecture support**: Both x86_64 and ARM64 variants
-- **Secure**: Runs as non-root user with minimal privileges
+- **Secure**: Runs in isolated container with minimal privileges
 - **Auto-configuration**: Automatically registers with GitHub
 - **Graceful shutdown**: Properly deregisters runner on container stop
 - **Docker support**: BuildKit integration for secure container builds (Fargate-compatible)
@@ -97,7 +97,7 @@ docker-compose up -d
 1. **Registration tokens** are short-lived (1 hour) and single-use
 2. **Personal Access Tokens** should have minimal scopes (only `repo` or `admin:org` for enterprise)
 3. **Runner isolation**: Each runner runs in its own container
-4. **Non-root execution**: Runner process runs as `actions-runner` user
+4. **Container isolation**: Runner process runs in isolated container environment
 5. **Docker builds**: Uses BuildKit sidecar via TCP (perfect for ECS scaling - no shared volumes)
 
 ## Troubleshooting

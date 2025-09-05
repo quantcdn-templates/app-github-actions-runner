@@ -23,12 +23,8 @@ RUN apt-get update && apt-get install -y \
     && apt-get install -y docker-ce-cli docker-buildx-plugin \
     && rm -rf /var/lib/apt/lists/*
 
-# Create actions-runner user
-RUN useradd -m -s /bin/bash actions-runner && \
-    echo "actions-runner ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-
-# Set up actions-runner directory
-WORKDIR /home/actions-runner
+# Set up runner directory
+WORKDIR /runner
 
 # Download and install GitHub Actions runner (multi-arch)
 ARG TARGETARCH
@@ -54,18 +50,14 @@ RUN case ${TARGETARCH} in \
     tar xzf ./actions-runner-linux-${ARCH_NAME}-${RUNNER_VERSION}.tar.gz && \
     rm actions-runner-linux-${ARCH_NAME}-${RUNNER_VERSION}.tar.gz
 
-# Install additional dependencies for the runner (as root to avoid qemu emulation issues)
+# Install additional dependencies for the runner
 RUN ./bin/installdependencies.sh
 
-# Copy entrypoint script and set ownership
-COPY entrypoint.sh /home/actions-runner/entrypoint.sh
-RUN chown -R actions-runner:actions-runner /home/actions-runner && \
-    chmod +x /home/actions-runner/entrypoint.sh
-
-# Switch to actions-runner user
-USER actions-runner
+# Copy entrypoint script
+COPY entrypoint.sh /runner/entrypoint.sh
+RUN chmod +x /runner/entrypoint.sh
 
 # Expose any ports if needed (none for basic runner)
 # GitHub Actions runners typically don't need exposed ports
 
-ENTRYPOINT ["/home/actions-runner/entrypoint.sh"]
+ENTRYPOINT ["/runner/entrypoint.sh"]

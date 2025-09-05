@@ -1,6 +1,6 @@
 services:
   buildkit:
-    image: moby/buildkit:buildkitd
+    image: moby/buildkit:latest
     restart: unless-stopped
     environment:
       - BUILDKITD_FLAGS=--oci-worker-no-process-sandbox --addr tcp://0.0.0.0:1234
@@ -40,8 +40,8 @@ services:
     
     # Fargate-compatible volumes
     volumes:
-      - runner_config:/home/actions-runner/.runner-config
-      - runner_work:/home/actions-runner/_work
+      - runner_config:/runner/.runner-config
+      - runner_work:/runner/_work
     
     # Resources (adjust based on your needs)
     # mem_limit: 2g
