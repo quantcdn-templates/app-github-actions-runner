@@ -6,7 +6,7 @@ echo "[$(date +'%Y-%m-%d %H:%M:%S')] GitHub Actions Runner starting..."
 # Required environment variables
 GITHUB_ORG=${GITHUB_ORG:-}
 GITHUB_TOKEN=${GITHUB_TOKEN:-}
-RUNNER_NAME=${RUNNER_NAME:-"${QUANT_APP_NAME:-quant-runner}-$(date +%s)-$(shuf -i 100-999 -n 1)"}
+RUNNER_NAME=${RUNNER_NAME:-"${QUANT_APP_NAME:-quant-runner}-$(shuf -i 1000-9999 -n 1)"}
 RUNNER_LABELS=${RUNNER_LABELS:-"quant-cloud,self-hosted"}
 
 # Validate required environment variables
@@ -21,45 +21,27 @@ echo "[$(date +'%Y-%m-%d %H:%M:%S')] Organization: ${GITHUB_ORG}"
 echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner name: ${RUNNER_NAME}"
 echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner labels: ${RUNNER_LABELS}"
 
-# Smart runner registration to handle ECS scaling conflicts
-REGISTRATION_NEEDED=true
-
-# Check for existing runner config
+# Simple approach: Use existing config if available, otherwise register new
 if [ -d .runner-config ] && [ -f .runner-config/.runner ]; then
-    echo "[$(date +'%Y-%m-%d %H:%M:%S')] Found existing runner config, attempting to reuse..."
-    
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] Found existing runner config, restoring..."
     # Copy all config files
     [ -f .runner-config/.runner ] && cp .runner-config/.runner . && echo "[$(date +'%Y-%m-%d %H:%M:%S')] Restored .runner"
     [ -f .runner-config/.credentials ] && cp .runner-config/.credentials . && echo "[$(date +'%Y-%m-%d %H:%M:%S')] Restored .credentials"
     [ -f .runner-config/.credentials_rsaparams ] && cp .runner-config/.credentials_rsaparams . && echo "[$(date +'%Y-%m-%d %H:%M:%S')] Restored .credentials_rsaparams"
-    
-    # Test if we can use existing config by doing a quick connection test
-    echo "[$(date +'%Y-%m-%d %H:%M:%S')] Testing existing runner configuration..."
-    if timeout 10s ./run.sh --once 2>/dev/null | grep -q "Listening for Jobs\|Runner connect error"; then
-        echo "[$(date +'%Y-%m-%d %H:%M:%S')] ✅ Existing config works, skipping registration"
-        REGISTRATION_NEEDED=false
-    else
-        echo "[$(date +'%Y-%m-%d %H:%M:%S')] ⚠️ Existing config failed, will register new runner"
-        # Generate new unique name for new registration
-        RUNNER_NAME="${QUANT_APP_NAME:-quant-runner}-$(date +%s)-$(shuf -i 100-999 -n 1)"
-        echo "[$(date +'%Y-%m-%d %H:%M:%S')] New runner name: ${RUNNER_NAME}"
-    fi
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] ✅ Using existing runner configuration"
 else
-    echo "[$(date +'%Y-%m-%d %H:%M:%S')] No existing runner config found"
-fi
-
-# Register if needed
-if [ "$REGISTRATION_NEEDED" = "true" ]; then
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] No existing runner config found, registering new runner..."
+    
     # Validate registration token 
     if [ -z "$GITHUB_TOKEN" ]; then
-        echo "ERROR: GITHUB_TOKEN environment variable is required for registration"
+        echo "ERROR: GITHUB_TOKEN environment variable is required for initial registration"
         echo "Get a runner registration token from:"
         echo "https://github.com/${GITHUB_ORG}/settings/actions/runners/new"
         exit 1
     fi
 
-    # Register this runner instance with GitHub
-    echo "[$(date +'%Y-%m-%d %H:%M:%S')] Registering new runner with GitHub..."
+    # Register new runner with GitHub
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] Registering runner with GitHub..."
     ./config.sh \
         --url "https://github.com/${GITHUB_ORG}" \
         --token "${GITHUB_TOKEN}" \
