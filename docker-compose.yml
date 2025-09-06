@@ -3,7 +3,11 @@ services:
     image: moby/buildkit:latest
     restart: unless-stopped
     environment:
-      - BUILDKITD_FLAGS=--oci-worker-no-process-sandbox --addr unix:///run/buildkit/buildkitd.sock --addr tcp://0.0.0.0:1234
+      - BUILDKIT_TCP_TRANSPORT_ENABLED=true
+    volumes:
+      - buildkit_socket:/run/buildkit
+    ports:
+      - "8372:8372"
 
   github-runner:
     build:
@@ -40,8 +44,8 @@ services:
       # Examples: 2vCPU/4GB→2 runners, 4vCPU/8GB→4 runners, 8vCPU/16GB→6 runners
       - RUNNER_COUNT=${RUNNER_COUNT:-1}
       
-      # BuildKit configuration for ECS scaling compatibility
-      - BUILDKIT_HOST=tcp://buildkit:1234
+      # BuildKit configuration - using shared socket volume
+      - BUILDKIT_HOST=unix:///run/buildkit/buildkitd.sock
       
       # Allow runner to run as root user
       - RUNNER_ALLOW_RUNASROOT=1
@@ -49,6 +53,7 @@ services:
     # Fargate-compatible volumes (only config needs persistence)
     volumes:
       - runner_config:/runner/.runner-config
+      - buildkit_socket:/run/buildkit
       # _work uses ephemeral storage - EFS doesn't support tar ownership changes
     
     # Resources (adjust based on your needs)
@@ -57,3 +62,4 @@ services:
 
 volumes:
   runner_config:
+  buildkit_socket:
