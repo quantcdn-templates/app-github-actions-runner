@@ -136,34 +136,25 @@ start_runner() {
            # Configure BuildKit for this runner instance
            echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: Configuring BuildKit..."
            
-           # Set up environment variables for BuildKit
-           export DOCKER_HOST="unix:///run/buildkit/buildkitd.sock"
-           export DOCKER_BUILDKIT=1
-           export BUILDKIT_HOST="unix:///run/buildkit/buildkitd.sock"
-           
-           # Create .env file for the runner to pick up these variables
-           cat > .env << EOF
-DOCKER_HOST=unix:///run/buildkit/buildkitd.sock
-DOCKER_BUILDKIT=1
-BUILDKIT_HOST=unix:///run/buildkit/buildkitd.sock
-EOF
-           
-           # Configure docker context to use BuildKit by default
-           ./bin/docker context create buildkit --docker "host=unix:///run/buildkit/buildkitd.sock" 2>/dev/null || true
-           ./bin/docker context use buildkit 2>/dev/null || true
-           
-           # If BUILDKIT_HOST is set (remote BuildKit), configure that instead
+           # Check if BUILDKIT_HOST is set (remote BuildKit via TCP)
            if [ -n "${BUILDKIT_HOST:-}" ]; then
                echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: Using remote BuildKit: ${BUILDKIT_HOST}"
+               
+               # Set up environment variables for remote BuildKit
                export DOCKER_HOST="${BUILDKIT_HOST}"
+               export DOCKER_BUILDKIT=1
                export BUILDKIT_HOST="${BUILDKIT_HOST}"
                
-               # Update .env file for remote BuildKit
+               # Create .env file for remote BuildKit
                cat > .env << EOF
 DOCKER_HOST=${BUILDKIT_HOST}
 DOCKER_BUILDKIT=1
 BUILDKIT_HOST=${BUILDKIT_HOST}
 EOF
+               
+               # Configure docker context to use remote BuildKit
+               ./bin/docker context create buildkit --docker "host=${BUILDKIT_HOST}" 2>/dev/null || true
+               ./bin/docker context use buildkit 2>/dev/null || true
                
                # Remove any existing default builder to avoid conflicts
                ./bin/docker buildx rm default 2>/dev/null || true
@@ -174,6 +165,24 @@ EOF
                    --driver remote \
                    "${BUILDKIT_HOST}" \
                    --use 2>/dev/null || true
+           else
+               echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: Using local BuildKit socket"
+               
+               # Fallback to local BuildKit socket
+               export DOCKER_HOST="unix:///run/buildkit/buildkitd.sock"
+               export DOCKER_BUILDKIT=1
+               export BUILDKIT_HOST="unix:///run/buildkit/buildkitd.sock"
+               
+               # Create .env file for local BuildKit
+               cat > .env << EOF
+DOCKER_HOST=unix:///run/buildkit/buildkitd.sock
+DOCKER_BUILDKIT=1
+BUILDKIT_HOST=unix:///run/buildkit/buildkitd.sock
+EOF
+               
+               # Configure docker context to use local BuildKit
+               ./bin/docker context create buildkit --docker "host=unix:///run/buildkit/buildkitd.sock" 2>/dev/null || true
+               ./bin/docker context use buildkit 2>/dev/null || true
            fi
            
            echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: ✅ BuildKit configured"
