@@ -133,9 +133,38 @@ start_runner() {
         echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: ✅ Config saved"
     fi
     
-           # Configure BuildKit for this runner instance (if BUILDKIT_HOST is set)
+           # Configure BuildKit for this runner instance
+           echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: Configuring BuildKit..."
+           
+           # Set up environment variables for BuildKit
+           export DOCKER_HOST="unix:///run/buildkit/buildkitd.sock"
+           export DOCKER_BUILDKIT=1
+           export BUILDKIT_HOST="unix:///run/buildkit/buildkitd.sock"
+           
+           # Create .env file for the runner to pick up these variables
+           cat > .env << EOF
+DOCKER_HOST=unix:///run/buildkit/buildkitd.sock
+DOCKER_BUILDKIT=1
+BUILDKIT_HOST=unix:///run/buildkit/buildkitd.sock
+EOF
+           
+           # Configure docker context to use BuildKit by default
+           ./bin/docker context create buildkit --docker "host=unix:///run/buildkit/buildkitd.sock" 2>/dev/null || true
+           ./bin/docker context use buildkit 2>/dev/null || true
+           
+           # If BUILDKIT_HOST is set (remote BuildKit), configure that instead
            if [ -n "${BUILDKIT_HOST:-}" ]; then
-               echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: Configuring BuildKit..."
+               echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: Using remote BuildKit: ${BUILDKIT_HOST}"
+               export DOCKER_HOST="${BUILDKIT_HOST}"
+               export BUILDKIT_HOST="${BUILDKIT_HOST}"
+               
+               # Update .env file for remote BuildKit
+               cat > .env << EOF
+DOCKER_HOST=${BUILDKIT_HOST}
+DOCKER_BUILDKIT=1
+BUILDKIT_HOST=${BUILDKIT_HOST}
+EOF
+               
                # Remove any existing default builder to avoid conflicts
                ./bin/docker buildx rm default 2>/dev/null || true
                
@@ -145,12 +174,16 @@ start_runner() {
                    --driver remote \
                    "${BUILDKIT_HOST}" \
                    --use 2>/dev/null || true
-               
-               echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: ✅ BuildKit configured"
            fi
            
-           # Start the runner in background
+           echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: ✅ BuildKit configured"
+           
+           # Start the runner in background with BuildKit environment
            echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: Starting runner process..."
+           # Export environment variables for the runner process and its child workflows
+           DOCKER_HOST="$DOCKER_HOST" \
+           DOCKER_BUILDKIT="$DOCKER_BUILDKIT" \
+           BUILDKIT_HOST="$BUILDKIT_HOST" \
            ./run.sh &
            local runner_pid=$!
            RUNNER_PIDS+=($runner_pid)
