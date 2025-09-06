@@ -20,9 +20,11 @@ services:
       # Required: GitHub organization/user name
       - GITHUB_ORG=${GITHUB_ORG}
       
-      # Required for initial registration only (persisted after first run)
-      # Get from: https://github.com/{ORG}/settings/actions/runners/new
+      # Auth: Use either GITHUB_TOKEN (registration token) or GITHUB_PAT (preferred)
+      # GITHUB_TOKEN: Short-lived registration token from: https://github.com/{ORG}/settings/actions/runners/new  
+      # GITHUB_PAT: Long-lived Personal Access Token (preferred for automation)
       - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GITHUB_PAT=${GITHUB_PAT}
       
       # Optional: Custom runner name (defaults to QUANT_APP_NAME + random suffix)
       - RUNNER_NAME=${RUNNER_NAME}
@@ -33,6 +35,10 @@ services:
       
       # Optional: Working directory for actions
       - RUNNER_WORK_DIR=${RUNNER_WORK_DIR:-_work}
+      
+      # Number of parallel runners (default: 1)
+      # Examples: 2vCPU/4GB→2 runners, 4vCPU/8GB→4 runners, 8vCPU/16GB→6 runners
+      - RUNNER_COUNT=${RUNNER_COUNT:-1}
       
       # BuildKit configuration for ECS scaling compatibility
       - BUILDKIT_HOST=tcp://buildkit:1234
