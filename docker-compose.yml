@@ -39,10 +39,10 @@ services:
       # Allow runner to run as root user
       - RUNNER_ALLOW_RUNASROOT=1
     
-    # Fargate-compatible volumes
+    # Fargate-compatible volumes (only config needs persistence)
     volumes:
       - runner_config:/runner/.runner-config
-      - runner_work:/runner/_work
+      # _work uses ephemeral storage - EFS doesn't support tar ownership changes
     
     # Resources (adjust based on your needs)
     # mem_limit: 2g
@@ -50,4 +50,3 @@ services:
 
 volumes:
   runner_config:
-  runner_work:
