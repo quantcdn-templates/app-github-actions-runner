@@ -63,13 +63,14 @@ start_runner() {
     mkdir -p "${runner_dir}"
     cd "${runner_dir}"
     
-    # Copy shared binaries and scripts to runner directory
-    cp -r /runner/bin "${runner_dir}/"
-    cp /runner/config.sh "${runner_dir}/"
-    cp /runner/run.sh "${runner_dir}/"
-    cp /runner/*.template "${runner_dir}/" 2>/dev/null || true
-    cp /runner/env.sh "${runner_dir}/" 2>/dev/null || true
-    cp /runner/safe_sleep.sh "${runner_dir}/" 2>/dev/null || true
+           # Copy shared binaries, scripts, and externals to runner directory
+           cp -r /runner/bin "${runner_dir}/"
+           cp -r /runner/externals "${runner_dir}/" 2>/dev/null || true
+           cp /runner/config.sh "${runner_dir}/"
+           cp /runner/run.sh "${runner_dir}/"
+           cp /runner/*.template "${runner_dir}/" 2>/dev/null || true
+           cp /runner/env.sh "${runner_dir}/" 2>/dev/null || true
+           cp /runner/safe_sleep.sh "${runner_dir}/" 2>/dev/null || true
     
     # Check for persistent config for this runner instance
     local config_dir="/runner/.runner-config/instance-${runner_id}"
