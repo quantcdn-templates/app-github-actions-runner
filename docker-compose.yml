@@ -1,13 +1,16 @@
 services:
   buildkit:
     image: moby/buildkit:latest
-    restart: unless-stopped
-    environment:
-      - BUILDKIT_TCP_TRANSPORT_ENABLED=true
-    volumes:
-      - buildkit_socket:/run/buildkit
+    privileged: true   # required for buildkitd
+    command: >
+      --addr tcp://0.0.0.0:1234
+      --addr unix:///run/buildkit/buildkitd.sock
     ports:
-      - "8372:8372"
+      - "1234:1234"
+    volumes:
+      - buildkitd-data:/var/lib/buildkit
+      - /run/buildkit:/run/buildkit  # so you can also use local unix socket if needed
+    restart: unless-stopped
 
   github-runner:
     build:
@@ -44,8 +47,8 @@ services:
       # Examples: 2vCPU/4GB→2 runners, 4vCPU/8GB→4 runners, 8vCPU/16GB→6 runners
       - RUNNER_COUNT=${RUNNER_COUNT:-1}
       
-      # BuildKit configuration - using shared socket volume
-      - BUILDKIT_HOST=unix:///run/buildkit/buildkitd.sock
+      # BuildKit configuration - TCP with Unix socket fallback
+      - BUILDKIT_HOST=tcp://buildkit:1234
       
       # Allow runner to run as root user
       - RUNNER_ALLOW_RUNASROOT=1
@@ -53,7 +56,6 @@ services:
     # Fargate-compatible volumes (only config needs persistence)
     volumes:
       - runner_config:/runner/.runner-config
-      - buildkit_socket:/run/buildkit
       # _work uses ephemeral storage - EFS doesn't support tar ownership changes
     
     # Resources (adjust based on your needs)
@@ -62,4 +64,4 @@ services:
 
 volumes:
   runner_config:
-  buildkit_socket:
+  buildkitd-data:
