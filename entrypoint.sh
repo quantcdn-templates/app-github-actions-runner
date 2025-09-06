@@ -8,7 +8,14 @@ GITHUB_ORG=${GITHUB_ORG:-}
 GITHUB_TOKEN=${GITHUB_TOKEN:-}
 GITHUB_PAT=${GITHUB_PAT:-}
 RUNNER_NAME_BASE=${RUNNER_NAME:-"${QUANT_APP_NAME:-quant-runner}-$(shuf -i 1000-9999 -n 1)"}
-RUNNER_LABELS=${RUNNER_LABELS:-"quant-cloud,self-hosted"}
+# Auto-detect architecture and add to labels
+ARCH=$(uname -m)
+case $ARCH in
+    x86_64) ARCH_LABEL="amd64" ;;
+    aarch64) ARCH_LABEL="arm64" ;;
+    *) ARCH_LABEL="$ARCH" ;;
+esac
+RUNNER_LABELS=${RUNNER_LABELS:-"quant-cloud,self-hosted,$ARCH_LABEL"}
 RUNNER_COUNT=${RUNNER_COUNT:-1}
 
 # Function to generate registration token from PAT (inspired by multi-runners)

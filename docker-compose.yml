@@ -11,6 +11,7 @@ services:
       dockerfile: Dockerfile
       platforms:
         - linux/amd64
+        - linux/arm64
     image: ghcr.io/quantcdn-templates/app-github-actions-runner:latest
     restart: unless-stopped
     depends_on:
@@ -29,7 +30,7 @@ services:
       - RUNNER_NAME=${RUNNER_NAME}
       - QUANT_APP_NAME=${QUANT_APP_NAME}
       
-      # Optional: Custom labels (defaults to quant-cloud,self-hosted)
+      # Optional: Custom labels (auto-detects architecture)
       - RUNNER_LABELS=${RUNNER_LABELS:-quant-cloud,self-hosted}
       
       # Optional: Working directory for actions
