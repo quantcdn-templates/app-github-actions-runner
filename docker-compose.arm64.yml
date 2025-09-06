@@ -3,7 +3,7 @@ services:
     image: moby/buildkit:latest
     restart: unless-stopped
     environment:
-      - BUILDKITD_FLAGS=--oci-worker-no-process-sandbox --addr tcp://0.0.0.0:1234
+      - BUILDKITD_FLAGS=--oci-worker-no-process-sandbox --addr unix:///run/buildkit/buildkitd.sock --addr tcp://0.0.0.0:1234
     # No shared cache volume - each instance uses ephemeral storage to avoid lock conflicts
 
   github-runner:

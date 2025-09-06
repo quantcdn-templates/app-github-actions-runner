@@ -126,12 +126,28 @@ start_runner() {
         echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: ✅ Config saved"
     fi
     
-    # Start the runner in background
-    echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: Starting runner process..."
-    ./run.sh &
-    local runner_pid=$!
-    RUNNER_PIDS+=($runner_pid)
-    echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: Started with PID ${runner_pid}"
+           # Configure BuildKit for this runner instance (if BUILDKIT_HOST is set)
+           if [ -n "${BUILDKIT_HOST:-}" ]; then
+               echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: Configuring BuildKit..."
+               # Remove any existing default builder to avoid conflicts
+               ./bin/docker buildx rm default 2>/dev/null || true
+               
+               # Create and use our remote BuildKit builder
+               ./bin/docker buildx create \
+                   --name "quant-buildkit-${runner_id}" \
+                   --driver remote \
+                   "${BUILDKIT_HOST}" \
+                   --use 2>/dev/null || true
+               
+               echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: ✅ BuildKit configured"
+           fi
+           
+           # Start the runner in background
+           echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: Starting runner process..."
+           ./run.sh &
+           local runner_pid=$!
+           RUNNER_PIDS+=($runner_pid)
+           echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: Started with PID ${runner_pid}"
 }
 
 # Handle shutdown gracefully for all runners
