@@ -141,25 +141,23 @@ start_runner() {
                echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: Using BuildKit TCP: ${BUILDKIT_HOST}"
                
                # Set up environment variables for TCP BuildKit
-               export DOCKER_HOST="${BUILDKIT_HOST}"
+               # Don't set DOCKER_HOST to BuildKit - they use different protocols
                export DOCKER_BUILDKIT=1
                export BUILDKIT_HOST="${BUILDKIT_HOST}"
                
                # Create .env file for TCP BuildKit (for workflows to inherit)
                cat > .env << EOF
-DOCKER_HOST=${BUILDKIT_HOST}
 DOCKER_BUILDKIT=1
 BUILDKIT_HOST=${BUILDKIT_HOST}
 EOF
                
-               # Configure docker context to use TCP BuildKit
-               /usr/bin/docker context create buildkit --docker "host=${BUILDKIT_HOST}" 2>/dev/null || true
-               /usr/bin/docker context use buildkit 2>/dev/null || true
+               # Don't create docker context pointing to BuildKit - they use different protocols
+               # Instead, we'll create a remote buildx builder
                
-               # Wait for BuildKit to be ready
+               # Wait for BuildKit to be ready and create remote builder
                echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: Waiting for BuildKit to be ready..."
                for i in {1..30}; do
-                   if /usr/bin/docker buildx create --driver remote --name "tcp-buildkit-${runner_id}" "${BUILDKIT_HOST}" --use 2>/dev/null; then
+                   if /usr/bin/docker buildx create --driver remote --name "github-runner-buildkit" "${BUILDKIT_HOST}" --use --bootstrap 2>/dev/null; then
                        echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: ✅ BuildKit connection established"
                        break
                    else
@@ -169,10 +167,11 @@ EOF
                done
                
                # Verify the builder is working
-               if /usr/bin/docker buildx inspect "tcp-buildkit-${runner_id}" >/dev/null 2>&1; then
+               if /usr/bin/docker buildx inspect "github-runner-buildkit" >/dev/null 2>&1; then
                    echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: ✅ TCP BuildKit builder ready"
-                   # Set as default builder for all workflows
-                   /usr/bin/docker buildx use "tcp-buildkit-${runner_id}"
+                   # Ensure it's the active builder for all workflows
+                   /usr/bin/docker buildx use "github-runner-buildkit"
+                   echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: 🚀 Ready for GitHub Actions workflows"
                else
                    echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: ❌ Failed to connect to BuildKit at ${BUILDKIT_HOST}"
                    exit 1
