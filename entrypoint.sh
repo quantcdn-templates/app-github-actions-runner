@@ -188,7 +188,6 @@ EOF
            # Start the runner in background with BuildKit environment
            echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: Starting runner process..."
            # Export environment variables for the runner process and its child workflows
-           DOCKER_HOST="$DOCKER_HOST" \
            DOCKER_BUILDKIT="$DOCKER_BUILDKIT" \
            BUILDKIT_HOST="$BUILDKIT_HOST" \
            ./run.sh &
