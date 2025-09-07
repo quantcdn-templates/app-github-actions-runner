@@ -136,37 +136,52 @@ start_runner() {
            # Configure BuildKit for this runner instance
            echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: Configuring BuildKit..."
            
-           # Configure BuildKit for this runner instance  
+           # Configure BuildKit for this runner instance (TCP only)
            if [ -n "${BUILDKIT_HOST:-}" ]; then
-               echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: Using BuildKit: ${BUILDKIT_HOST}"
+               echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: Using BuildKit TCP: ${BUILDKIT_HOST}"
                
-               # Set up environment variables for BuildKit
+               # Set up environment variables for TCP BuildKit
                export DOCKER_HOST="${BUILDKIT_HOST}"
                export DOCKER_BUILDKIT=1
                export BUILDKIT_HOST="${BUILDKIT_HOST}"
                
-               # Create .env file for BuildKit
+               # Create .env file for TCP BuildKit (for workflows to inherit)
                cat > .env << EOF
 DOCKER_HOST=${BUILDKIT_HOST}
 DOCKER_BUILDKIT=1
 BUILDKIT_HOST=${BUILDKIT_HOST}
 EOF
                
-               # Configure docker context to use BuildKit
-               ./bin/docker context create buildkit --docker "host=${BUILDKIT_HOST}" 2>/dev/null || true
-               ./bin/docker context use buildkit 2>/dev/null || true
+               # Configure docker context to use TCP BuildKit
+               /usr/bin/docker context create buildkit --docker "host=${BUILDKIT_HOST}" 2>/dev/null || true
+               /usr/bin/docker context use buildkit 2>/dev/null || true
                
-               # Remove any existing default builder to avoid conflicts
-               ./bin/docker buildx rm default 2>/dev/null || true
+               # Wait for BuildKit to be ready
+               echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: Waiting for BuildKit to be ready..."
+               for i in {1..30}; do
+                   if /usr/bin/docker buildx create --driver remote --name "tcp-buildkit-${runner_id}" "${BUILDKIT_HOST}" --use 2>/dev/null; then
+                       echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: ✅ BuildKit connection established"
+                       break
+                   else
+                       echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: Waiting for BuildKit... (attempt $i/30)"
+                       sleep 2
+                   fi
+               done
                
-               # Create and use our BuildKit builder
-               ./bin/docker buildx create \
-                   --name "quant-buildkit-${runner_id}" \
-                   --driver remote \
-                   "${BUILDKIT_HOST}" \
-                   --use 2>/dev/null || true
+               # Verify the builder is working
+               if /usr/bin/docker buildx inspect "tcp-buildkit-${runner_id}" >/dev/null 2>&1; then
+                   echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: ✅ TCP BuildKit builder ready"
+                   # Set as default builder for all workflows
+                   /usr/bin/docker buildx use "tcp-buildkit-${runner_id}"
+               else
+                   echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: ❌ Failed to connect to BuildKit at ${BUILDKIT_HOST}"
+                   exit 1
+               fi
+               
+               echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: ✅ TCP BuildKit configured and set as default"
            else
-               echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: No BUILDKIT_HOST configured"
+               echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: ❌ No BUILDKIT_HOST configured - TCP required for ECS"
+               exit 1
            fi
            
            echo "[$(date +'%Y-%m-%d %H:%M:%S')] Runner ${runner_id}: ✅ BuildKit configured"

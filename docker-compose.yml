@@ -4,12 +4,8 @@ services:
     privileged: true   # required for buildkitd
     command: >
       --addr tcp://0.0.0.0:1234
-      --addr unix:///run/buildkit/buildkitd.sock
     ports:
       - "1234:1234"
-    volumes:
-      - buildkitd-data:/var/lib/buildkit
-      - /run/buildkit:/run/buildkit  # so you can also use local unix socket if needed
     restart: unless-stopped
 
   github-runner:
@@ -64,4 +60,3 @@ services:
 
 volumes:
   runner_config:
-  buildkitd-data:
